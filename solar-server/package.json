@@ -12,7 +12,8 @@
     "verify:loan": "node scripts/verify_loan_dynamic.js",
     "seed:performance": "node scripts/seedPerformance.js",
     "seed:journey": "node scripts/seed_journey_stages.js",
-    "seed:leads": "node scripts/seed_leads.js"
+    "seed:leads": "node scripts/seed_leads.js",
+    "seed:approvals": "node scripts/seed_approvals_overdue.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
