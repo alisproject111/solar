@@ -91,16 +91,34 @@ if (allowedOrigins.length === 0 && process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:3000');
 }
 
+// Keep production Netlify URL explicitly allowed as a safety fallback.
+allowedOrigins.push('https://solarkits.netlify.app');
+
+const isAllowedOrigin = (origin) => {
+  if (allowedOrigins.includes(origin)) return true;
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+    return (
+      protocol === 'https:' &&
+      (hostname === 'solarkits.netlify.app' ||
+        hostname.endsWith('--solarkits.netlify.app'))
+    );
+  } catch {
+    return false;
+  }
+};
+
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       console.log('Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false);
     }
   },
   credentials: true,
@@ -222,12 +240,16 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const isServerlessRuntime = Boolean(process.env.VERCEL);
 
-if (process.env.NODE_ENV !== 'production') {
+if (!isServerlessRuntime) {
   connectDB().then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
+  }).catch((error) => {
+    console.error('Failed to start server:', error.message);
+    process.exit(1);
   });
 }
 
