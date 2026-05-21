@@ -49,5 +49,6 @@ const temporaryInchargeSchema = new mongoose.Schema(
 
 // Index for efficient date range queries
 temporaryInchargeSchema.index({ originalUser: 1, startDate: 1, endDate: 1 });
+temporaryInchargeSchema.index({ tempInchargeUser: 1, isActive: 1 });
 
 export default mongoose.model('TemporaryIncharge', temporaryInchargeSchema);

@@ -79,8 +79,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    user.lastLogin = new Date();
-    await user.save();
+    await User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } });
 
     // Check for active Temporary In-charge assignments
     const today = new Date();

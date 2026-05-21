@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       required: true,
+      index: true,
     },
     country: {
       type: mongoose.Schema.Types.ObjectId,

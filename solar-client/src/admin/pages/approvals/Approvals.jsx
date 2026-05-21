@@ -238,7 +238,7 @@ export default function AdminApproval() {
         response.forEach(item => {
           if (item.status === 'Approved') {
             newApproved.push({
-              id: item._id,
+              _mongoId: item._id,   // MongoDB ObjectId — never overwritten by data spread
               ...item.data,
               type: item.type,
               status: item.status,
@@ -249,7 +249,7 @@ export default function AdminApproval() {
             });
           } else if (item.status === 'Rejected') {
             newRejected.push({
-              id: item._id,
+              _mongoId: item._id,   // MongoDB ObjectId — never overwritten by data spread
               ...item.data,
               type: item.type,
               status: item.status,
@@ -261,7 +261,7 @@ export default function AdminApproval() {
           } else {
             if (newData[item.type]) {
               newData[item.type].push({
-                id: item._id,
+                _mongoId: item._id,   // MongoDB ObjectId — never overwritten by data spread
                 ...item.data,
                 type: item.type,
                 status: item.status,
@@ -377,14 +377,11 @@ export default function AdminApproval() {
   };
 
 
-  const approveItem = async (id, type) => {
+  const approveItem = async (_mongoId, type) => {
     try {
-      await updateApprovalStatus(id, 'Approved');
+      await updateApprovalStatus(_mongoId, 'Approved');
       alert('Item approved successfully!');
-      // Refresh data
-      // Triggering re-fetch by updating a dummy state or just calling fetchApprovalData if it was extracted
-      // For now, let's manually update local state for immediate feedback
-      const item = data[type].find(i => i.id === id);
+      const item = data[type].find(i => i._mongoId === _mongoId);
       if (item) {
         const approvedItem = {
           ...item,
@@ -395,7 +392,7 @@ export default function AdminApproval() {
         setApprovedItems(prev => [...prev, approvedItem]);
         setData(prev => ({
           ...prev,
-          [type]: prev[type].filter(i => i.id !== id)
+          [type]: prev[type].filter(i => i._mongoId !== _mongoId)
         }));
       }
     } catch (error) {
@@ -404,12 +401,11 @@ export default function AdminApproval() {
     }
   };
 
-  const rejectItem = async (id, type) => {
+  const rejectItem = async (_mongoId, type) => {
     try {
-      await updateApprovalStatus(id, 'Rejected', 'Rejected by Admin');
+      await updateApprovalStatus(_mongoId, 'Rejected', 'Rejected by Admin');
       alert('Item rejected!');
-      // Manual update for immediate feedback
-      const item = data[type].find(i => i.id === id);
+      const item = data[type].find(i => i._mongoId === _mongoId);
       if (item) {
         const rejectedItem = {
           ...item,
@@ -420,7 +416,7 @@ export default function AdminApproval() {
         setRejectedItems(prev => [...prev, rejectedItem]);
         setData(prev => ({
           ...prev,
-          [type]: prev[type].filter(i => i.id !== id)
+          [type]: prev[type].filter(i => i._mongoId !== _mongoId)
         }));
       }
     } catch (error) {
@@ -552,13 +548,13 @@ export default function AdminApproval() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
                         <button
-                          onClick={() => approveItem(item.id, type)}
+                          onClick={() => approveItem(item._mongoId, type)}
                           className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium"
                         >
                           Approve
                         </button>
                         <button
-                          onClick={() => rejectItem(item.id, type)}
+                          onClick={() => rejectItem(item._mongoId, type)}
                           className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium"
                         >
                           Reject
@@ -949,6 +945,11 @@ export default function AdminApproval() {
                 }`}
               onClick={() => handleApprovalTypeSelect('onboarding')}
             >
+              {onboardingOverdue > 0 && (
+                <div className="absolute top-3 right-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-md border-2 border-white animate-pulse min-w-[24px]">
+                  {onboardingOverdue}
+                </div>
+              )}
               <UserPlus className="w-8 h-8 mx-auto mb-3" />
               <h5 className="text-lg font-semibold">Onboarding Approvals</h5>
               <h2 className="text-3xl font-bold my-2">{onboardingPending}</h2>
@@ -964,6 +965,11 @@ export default function AdminApproval() {
                 }`}
               onClick={() => handleApprovalTypeSelect('company')}
             >
+              {companyOverdue > 0 && (
+                <div className="absolute top-3 right-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-md border-2 border-white animate-pulse min-w-[24px]">
+                  {companyOverdue}
+                </div>
+              )}
               <ListTodo className="w-8 h-8 mx-auto mb-3" />
               <h5 className="text-lg font-semibold">Company User Approvals</h5>
               <h2 className="text-3xl font-bold my-2">{companyPending}</h2>
@@ -991,6 +997,11 @@ export default function AdminApproval() {
                     }`}
                   onClick={() => handleCardSelect(card.type)}
                 >
+                  {card.overdue > 0 && (
+                    <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-md border border-white animate-pulse min-w-[20px]">
+                      {card.overdue}
+                    </div>
+                  )}
                   <h5 className="font-semibold">{card.label}</h5>
                   <h2 className="text-2xl font-bold my-2">{card.count}</h2>
                   <p className="text-opacity-90">Pending Approval</p>
@@ -1021,6 +1032,11 @@ export default function AdminApproval() {
                     }`}
                   onClick={() => handleCardSelect(card.type)}
                 >
+                  {card.overdue > 0 && (
+                    <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-md border border-white animate-pulse min-w-[20px]">
+                      {card.overdue}
+                    </div>
+                  )}
                   <h5 className="font-semibold">{card.label}</h5>
                   <h2 className="text-2xl font-bold my-2">{card.count}</h2>
                   <p className="text-opacity-90">Pending Approval</p>
