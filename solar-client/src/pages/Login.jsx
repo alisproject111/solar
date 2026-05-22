@@ -204,7 +204,8 @@ export default function Login() {
                     <Store size={16} className="text-emerald-600" />
                   </div>
                   <div className="text-left">
-                    <p className="font-medium text-slate-800 group-hover:text-emerald-700">Dealer</p>
+                    <p className="font-medium text-slate-800 group-hover:text-emerald-700">Partner</p>
+                    <p className="text-[10px] text-slate-400 mb-0.5">(e.g., Franchise, Dealer)</p>
                     <p className="text-xs text-slate-500">dealer@solarkits.com</p>
                   </div>
                 </div>
@@ -212,24 +213,8 @@ export default function Login() {
               </button>
 
               <button
-                onClick={() => handleDemoLogin('franchise@solarkits.com', '123456')}
-                className="w-full flex items-center justify-between p-3 bg-white hover:bg-purple-50 rounded-lg border border-gray-200 transition-all duration-200 group"
-              >
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <Building2 size={16} className="text-purple-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium text-slate-800 group-hover:text-purple-700">Franchisee</p>
-                    <p className="text-xs text-slate-500">franchise@solarkits.com</p>
-                  </div>
-                </div>
-                <span className="text-xs font-medium text-purple-600">Click to use</span>
-              </button>
-
-              <button
                 type="button"
-                onClick={() => handleDemoLogin('dealermanager@solarkits.com', 'password123')}
+                onClick={() => handleDemoLogin('franchisemanager@example.com', 'password123')}
                 className="w-full flex items-center justify-between p-3 bg-white hover:bg-blue-50 rounded-lg border border-gray-200 transition-all duration-200 group"
               >
                 <div className="flex items-center">
@@ -237,28 +222,12 @@ export default function Login() {
                     <Shield size={16} className="text-blue-600" />
                   </div>
                   <div className="text-left">
-                    <p className="font-medium text-slate-800 group-hover:text-blue-700">Dealer Manager</p>
-                    <p className="text-xs text-slate-500">dealermanager@solarkits.com</p>
-                  </div>
-                </div>
-                <span className="text-xs font-medium text-blue-600">Click to use</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('franchisemanager@example.com', 'password123')}
-                className="w-full flex items-center justify-between p-3 bg-white hover:bg-orange-50 rounded-lg border border-gray-200 transition-all duration-200 group"
-              >
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                    <Building2 size={16} className="text-orange-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium text-slate-800 group-hover:text-orange-700">Franchisee Manager</p>
+                    <p className="font-medium text-slate-800 group-hover:text-blue-700">Partner Manager</p>
+                    <p className="text-[10px] text-slate-400 mb-0.5">(e.g., Franchise Mgr, Dealer Mgr)</p>
                     <p className="text-xs text-slate-500">franchisemanager@example.com</p>
                   </div>
                 </div>
-                <span className="text-xs font-medium text-orange-600">Click to use</span>
+                <span className="text-xs font-medium text-blue-600">Click to use</span>
               </button>
             </div>
           </div>
@@ -295,6 +264,23 @@ export default function Login() {
                 <p className="font-semibold text-indigo-800 text-sm">Candidate</p>
                 <p className="text-xs text-indigo-600/70 mt-0.5">Portal</p>
               </button>
+            </div>
+          </div>
+
+          {/* All Login IDs Reference */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">
+              Available Test Login IDs
+            </h3>
+            <div className="text-xs text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div><strong className="text-slate-700">Admin:</strong> admin@solarkits.com</div>
+              <div><strong className="text-slate-700">Dealer:</strong> dealer@solarkits.com</div>
+              <div><strong className="text-slate-700">Franchise:</strong> franchise@solarkits.com</div>
+              <div><strong className="text-slate-700">Dealer Mgr:</strong> dealermanager@solarkits.com</div>
+              <div><strong className="text-slate-700">Franchise Mgr:</strong> franchisemanager@example.com</div>
+              <div className="md:col-span-2 text-center mt-2 pt-2 border-t border-slate-200 italic">
+                (Passwords are usually '123456' or 'password123')
+              </div>
             </div>
           </div>
 
