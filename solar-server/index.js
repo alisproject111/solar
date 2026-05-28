@@ -55,6 +55,7 @@ import orderProcurementSettingRoutes from './routes/settings/orderProcurementSet
 import candidatePortalRoutes from './routes/hr/candidatePortalRoutes.js';
 import employeeTrainingRoutes from './routes/hr/employeeTrainingRoutes.js';
 import leaveApprovalRoutes from './routes/hr/leaveApprovalRoutes.js';
+import rbacRoutes from './routes/admin/rbacRoutes.js';
 import { getSupplierTypes } from './controllers/vendors/vendorController.js';
 import { getAllModules } from './controllers/hr/hrController.js';
 
@@ -180,6 +181,7 @@ app.use('/api/settings/order-procurement', orderProcurementSettingRoutes);
 app.use('/api/candidate-portal', candidatePortalRoutes);
 app.use('/api/employee/training', employeeTrainingRoutes);
 app.use('/api/leave-approvals', leaveApprovalRoutes);
+app.use('/api/rbac', rbacRoutes);
 
 // Root level aliases for specific master data as per requirement
 app.get('/api/supplier-types', getSupplierTypes);

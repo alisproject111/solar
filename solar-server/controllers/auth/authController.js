@@ -1,6 +1,51 @@
 import User from '../../models/users/User.js';
 import TemporaryIncharge from '../../models/hr/TemporaryIncharge.js';
 import jwt from 'jsonwebtoken';
+import UserPanel from '../../models/users/UserPanel.js';
+import PanelPermission from '../../models/users/PanelPermission.js';
+
+const getUserPermissions = async (userId) => {
+  const permMap = {};
+  try {
+    const userPanels = await UserPanel.find({ userId });
+    if (!userPanels || userPanels.length === 0) return permMap;
+
+    for (const up of userPanels) {
+      const defaultPerms = await PanelPermission.find({ panelId: up.panelId }).populate('moduleId', 'key');
+      
+      defaultPerms.forEach(dp => {
+        if (dp.moduleId && dp.moduleId.key) {
+          const key = dp.moduleId.key.toLowerCase();
+          permMap[key] = {
+            view: dp.can_view,
+            add: dp.can_add,
+            edit: dp.can_edit,
+            delete: dp.can_delete
+          };
+        }
+      });
+
+      if (up.customPermissions && up.customPermissions.length > 0) {
+        const populatedUp = await UserPanel.findById(up._id).populate('customPermissions.moduleId', 'key');
+        populatedUp.customPermissions.forEach(cp => {
+          if (cp.moduleId && cp.moduleId.key) {
+            const key = cp.moduleId.key.toLowerCase();
+            if (!permMap[key]) {
+              permMap[key] = { view: false, add: false, edit: false, delete: false };
+            }
+            if (cp.can_view !== undefined) permMap[key].view = cp.can_view;
+            if (cp.can_add !== undefined) permMap[key].add = cp.can_add;
+            if (cp.can_edit !== undefined) permMap[key].edit = cp.can_edit;
+            if (cp.can_delete !== undefined) permMap[key].delete = cp.can_delete;
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching user permissions for auth payload:', error);
+  }
+  return permMap;
+};
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -98,6 +143,7 @@ export const login = async (req, res) => {
     const delegatedDepartments = activeAssignments.map(a => a.department);
 
     const token = generateToken(user._id, user.role);
+    const panelPermissions = await getUserPermissions(user._id);
 
     res.status(200).json({
       success: true,
@@ -112,6 +158,7 @@ export const login = async (req, res) => {
         dynamicRole: user.dynamicRole,
         status: user.status,
         state: user.state,
+        panelPermissions,
       },
     });
   } catch (error) {
@@ -152,6 +199,7 @@ export const getMe = async (req, res) => {
     // We'll attach it to the user object we send back
     const userObj = user.toObject();
     userObj.delegatedDepartments = delegatedDepartments;
+    userObj.panelPermissions = await getUserPermissions(user._id);
 
     res.status(200).json({
       success: true,

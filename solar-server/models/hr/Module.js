@@ -5,8 +5,7 @@ const moduleSchema = new mongoose.Schema(
         name: {
             type: String,
             required: true,
-            trim: true,
-            unique: true
+            trim: true
         },
         key: {
             type: String, // standardized key for frontend checks e.g., 'recruitment_management'
@@ -32,6 +31,19 @@ const moduleSchema = new mongoose.Schema(
         isActive: {
             type: Boolean,
             default: true
+        },
+        route: {
+            type: String,
+            default: ''
+        },
+        icon: {
+            type: String,
+            default: 'Layers'
+        },
+        parentModule: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Module',
+            default: null
         }
     },
     {
