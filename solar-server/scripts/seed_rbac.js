@@ -43,20 +43,24 @@ const subModulesList = [
   { parentKey: 'parent_partners', name: 'Support Tickets', key: 'partner_support_tickets', route: '/partners/support-tickets', icon: 'Shield', description: 'Open and manage service tickets' },
 
   // Submodules under 'Accounts Panel'
-  { parentKey: 'parent_accounts', name: 'Invoice', key: 'accounts_invoice', route: '/accounts/invoice', icon: 'FileText', description: 'Billing invoices operations' },
-  { parentKey: 'parent_accounts', name: 'Payments', key: 'accounts_payments', route: '/accounts/payments', icon: 'Activity', description: 'Track customer payments' },
-  { parentKey: 'parent_accounts', name: 'GST', key: 'accounts_gst', route: '/accounts/gst', icon: 'Layers', description: 'Financial tax and GST configuration' },
-  { parentKey: 'parent_accounts', name: 'Expenses', key: 'accounts_expenses', route: '/accounts/expenses', icon: 'Activity', description: 'Corporate and project expense sheets' },
-  { parentKey: 'parent_accounts', name: 'Payouts', key: 'accounts_payouts', route: '/accounts/payouts', icon: 'Activity', description: 'Manage driver and partner payouts' },
-  { parentKey: 'parent_accounts', name: 'Accounts Reports', key: 'accounts_reports', route: '/accounts/reports', icon: 'Shield', description: 'Finance P&L and cashflow reports' },
+  { parentKey: 'parent_accounts', name: 'Dashboard', key: 'accounts_dashboard', route: '/account-manager/dashboard', icon: 'Home', description: 'Dashboard view' },
+  { parentKey: 'parent_accounts', name: 'Solar Panel Bundle Plan', key: 'accounts_solar_panel_bundle_plan', route: '/account-manager/solar-panel-bundle-plan', icon: 'Settings', description: 'Bundle plans' },
+  { parentKey: 'parent_accounts', name: 'Procurement Plan', key: 'accounts_procurement_plan', route: '/account-manager/procurement-plan', icon: 'FileText', description: 'Procurement details' },
+  { parentKey: 'parent_accounts', name: 'Report', key: 'accounts_report', route: '/account-manager/report', icon: 'ClipboardList', description: 'Finance reports' },
+  { parentKey: 'parent_accounts', name: 'Order Journey', key: 'accounts_order_journey', route: '/account-manager/my-task/order-journey', icon: 'Truck', description: 'Track orders' },
+  { parentKey: 'parent_accounts', name: 'Replacement Order', key: 'accounts_replacement_order', route: '/account-manager/my-task/replacement-order', icon: 'RefreshCw', description: 'Returns management' },
+  { parentKey: 'parent_accounts', name: 'Warehouse Vendor Pay', key: 'accounts_warehouse_vendor_pay', route: '/account-manager/my-task/warehouse-vendor-pay', icon: 'Minus', description: 'Pay warehouse vendor' },
+  { parentKey: 'parent_accounts', name: 'Vendor Contract Pay', key: 'accounts_vendor_contract_pay', route: '/account-manager/my-task/vendor-contract-pay', icon: 'Minus', description: 'Pay vendor contract' },
+  { parentKey: 'parent_accounts', name: 'Track CP Payments', key: 'accounts_track_cp_payments', route: '/account-manager/my-task/track-cp-payments', icon: 'Minus', description: 'CP payments tracking' },
+  { parentKey: 'parent_accounts', name: 'Service', key: 'accounts_service', route: '/account-manager/my-task/service', icon: 'Minus', description: 'Accounts service' },
 
   // Submodules under 'Delivery Panel'
-  { parentKey: 'parent_delivery', name: 'Order Tracking', key: 'delivery_order_tracking', route: '/delivery/order-tracking', icon: 'Layers', description: 'Logistics shipment updates' },
-  { parentKey: 'parent_delivery', name: 'Dispatch', key: 'delivery_dispatch', route: '/delivery/dispatch', icon: 'Layers', description: 'Vehicle loading and dispatch reports' },
-  { parentKey: 'parent_delivery', name: 'Installation Status', key: 'delivery_installation_status', route: '/delivery/installation-status', icon: 'Settings', description: 'Site panels installation checkpoints' },
-  { parentKey: 'parent_delivery', name: 'Delivery Updates', key: 'delivery_updates', route: '/delivery/updates', icon: 'Activity', description: 'Operational order progress updates' },
-  { parentKey: 'parent_delivery', name: 'Site Photos', key: 'delivery_site_photos', route: '/delivery/site-photos', icon: 'FileText', description: 'Upload site completion photographs' },
-  { parentKey: 'parent_delivery', name: 'Service Tickets', key: 'delivery_service_tickets', route: '/delivery/service-tickets', icon: 'Shield', description: 'Installation issues service tickets' },
+  { parentKey: 'parent_delivery', name: 'Dashboard', key: 'delivery_dashboard', route: '/delivery-manager/dashboard', icon: 'Home', description: 'Dashboard view' },
+  { parentKey: 'parent_delivery', name: 'Delivery Management', key: 'delivery_delivery_management', route: '/delivery-manager/delivery-management', icon: 'Truck', description: 'Logistics updates' },
+  { parentKey: 'parent_delivery', name: 'Replacement Order', key: 'delivery_replacement_order', route: '/delivery-manager/replacement-order', icon: 'RefreshCw', description: 'Return and replace' },
+  { parentKey: 'parent_delivery', name: 'Report', key: 'delivery_report', route: '/delivery-manager/report', icon: 'ClipboardList', description: 'Delivery reports' },
+  { parentKey: 'parent_delivery', name: 'InWard', key: 'delivery_inward_management', route: '/delivery-manager/my-task/inward-management', icon: 'Minus', description: 'Inward tasks' },
+  { parentKey: 'parent_delivery', name: 'At Warehouse', key: 'delivery_at_warehouse', route: '/delivery-manager/my-task/at-warehouse', icon: 'Minus', description: 'Warehouse tasks' },
 ];
 
 async function seed() {

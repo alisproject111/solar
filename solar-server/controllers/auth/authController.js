@@ -4,14 +4,38 @@ import jwt from 'jsonwebtoken';
 import UserPanel from '../../models/users/UserPanel.js';
 import PanelPermission from '../../models/users/PanelPermission.js';
 
+const buildMenuTree = (modules) => {
+  const tree = [];
+  const map = {};
+
+  // Sort modules to ensure parents are processed before children if necessary
+  modules.forEach(mod => {
+    map[mod._id.toString()] = { ...mod.toObject(), subItems: [], hasDropdown: false };
+  });
+
+  modules.forEach(mod => {
+    const node = map[mod._id.toString()];
+    if (mod.parentModule && map[mod.parentModule.toString()]) {
+      map[mod.parentModule.toString()].subItems.push(node);
+      map[mod.parentModule.toString()].hasDropdown = true;
+    } else {
+      tree.push(node);
+    }
+  });
+
+  return tree;
+};
+
 const getUserPermissions = async (userId) => {
   const permMap = {};
+  const authorizedModules = [];
+
   try {
     const userPanels = await UserPanel.find({ userId });
-    if (!userPanels || userPanels.length === 0) return permMap;
+    if (!userPanels || userPanels.length === 0) return { permMap, dynamicMenuTree: [] };
 
     for (const up of userPanels) {
-      const defaultPerms = await PanelPermission.find({ panelId: up.panelId }).populate('moduleId', 'key');
+      const defaultPerms = await PanelPermission.find({ panelId: up.panelId }).populate('moduleId');
       
       defaultPerms.forEach(dp => {
         if (dp.moduleId && dp.moduleId.key) {
@@ -22,11 +46,16 @@ const getUserPermissions = async (userId) => {
             edit: dp.can_edit,
             delete: dp.can_delete
           };
+          if (dp.can_view) {
+             if (!authorizedModules.find(m => m.key.toLowerCase() === key)) {
+                authorizedModules.push(dp.moduleId);
+             }
+          }
         }
       });
 
       if (up.customPermissions && up.customPermissions.length > 0) {
-        const populatedUp = await UserPanel.findById(up._id).populate('customPermissions.moduleId', 'key');
+        const populatedUp = await UserPanel.findById(up._id).populate('customPermissions.moduleId');
         populatedUp.customPermissions.forEach(cp => {
           if (cp.moduleId && cp.moduleId.key) {
             const key = cp.moduleId.key.toLowerCase();
@@ -37,6 +66,15 @@ const getUserPermissions = async (userId) => {
             if (cp.can_add !== undefined) permMap[key].add = cp.can_add;
             if (cp.can_edit !== undefined) permMap[key].edit = cp.can_edit;
             if (cp.can_delete !== undefined) permMap[key].delete = cp.can_delete;
+
+            if (permMap[key].view) {
+               if (!authorizedModules.find(m => m.key.toLowerCase() === key)) {
+                  authorizedModules.push(cp.moduleId);
+               }
+            } else {
+               const idx = authorizedModules.findIndex(m => m.key.toLowerCase() === key);
+               if (idx !== -1) authorizedModules.splice(idx, 1);
+            }
           }
         });
       }
@@ -44,7 +82,9 @@ const getUserPermissions = async (userId) => {
   } catch (error) {
     console.error('Error fetching user permissions for auth payload:', error);
   }
-  return permMap;
+  
+  const dynamicMenuTree = buildMenuTree(authorizedModules);
+  return { permMap, dynamicMenuTree };
 };
 
 const generateToken = (id, role) => {
@@ -143,7 +183,7 @@ export const login = async (req, res) => {
     const delegatedDepartments = activeAssignments.map(a => a.department);
 
     const token = generateToken(user._id, user.role);
-    const panelPermissions = await getUserPermissions(user._id);
+    const { permMap, dynamicMenuTree } = await getUserPermissions(user._id);
 
     res.status(200).json({
       success: true,
@@ -158,7 +198,8 @@ export const login = async (req, res) => {
         dynamicRole: user.dynamicRole,
         status: user.status,
         state: user.state,
-        panelPermissions,
+        panelPermissions: permMap,
+        dynamicMenuTree,
       },
     });
   } catch (error) {
@@ -199,7 +240,9 @@ export const getMe = async (req, res) => {
     // We'll attach it to the user object we send back
     const userObj = user.toObject();
     userObj.delegatedDepartments = delegatedDepartments;
-    userObj.panelPermissions = await getUserPermissions(user._id);
+    const { permMap, dynamicMenuTree } = await getUserPermissions(user._id);
+    userObj.panelPermissions = permMap;
+    userObj.dynamicMenuTree = dynamicMenuTree;
 
     res.status(200).json({
       success: true,
