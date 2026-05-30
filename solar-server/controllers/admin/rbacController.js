@@ -36,7 +36,7 @@ export const getPanels = async (req, res) => {
 
 export const createPanel = async (req, res) => {
   try {
-    const { name, description, companyId } = req.body;
+    const { name, level, companyId } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, message: 'Panel name is required' });
     }
@@ -50,7 +50,7 @@ export const createPanel = async (req, res) => {
     const panel = await Panel.create({
       name,
       key,
-      description: description || '',
+      level: level || 'Country',
       companyId: companyId || 'Default Company',
     });
 
@@ -81,7 +81,7 @@ export const createPanel = async (req, res) => {
 export const updatePanel = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, isActive } = req.body;
+    const { name, level, isActive } = req.body;
 
     const panel = await Panel.findById(id);
     if (!panel) {
@@ -92,7 +92,7 @@ export const updatePanel = async (req, res) => {
       panel.name = name;
       panel.key = name.toLowerCase().replace(/\s+/g, '_');
     }
-    if (description !== undefined) panel.description = description;
+    if (level !== undefined) panel.level = level;
     if (isActive !== undefined) panel.isActive = isActive;
 
     await panel.save();
@@ -130,7 +130,7 @@ export const deletePanel = async (req, res) => {
 
 export const clonePanel = async (req, res) => {
   try {
-    const { sourcePanelId, targetName, targetDescription } = req.body;
+    const { sourcePanelId, targetName, targetLevel } = req.body;
     if (!sourcePanelId || !targetName) {
       return res.status(400).json({ success: false, message: 'Source panel and target name are required' });
     }
@@ -150,7 +150,7 @@ export const clonePanel = async (req, res) => {
     const newPanel = await Panel.create({
       name: targetName,
       key: targetKey,
-      description: targetDescription || `Cloned from ${sourcePanel.name}`,
+      level: targetLevel || sourcePanel.level || 'Country',
     });
 
     // 2. Fetch all permissions from the source panel
@@ -200,7 +200,7 @@ export const getModules = async (req, res) => {
 
 export const createModule = async (req, res) => {
   try {
-    const { name, key, description, route, icon, parentModule } = req.body;
+    const { name, key, description, route, icon, parentModule, panelId } = req.body;
     if (!name || !key || !route) {
       return res.status(400).json({ success: false, message: 'Name, standardised key, and route are required' });
     }
@@ -224,14 +224,17 @@ export const createModule = async (req, res) => {
 
     // Seed default permission mappings as false for all existing panels
     const panels = await Panel.find();
-    const permsToInsert = panels.map((p) => ({
-      panelId: p._id,
-      moduleId: mod._id,
-      can_view: false,
-      can_add: false,
-      can_edit: false,
-      can_delete: false,
-    }));
+    const permsToInsert = panels.map((p) => {
+      const isSelected = panelId && String(p._id) === String(panelId);
+      return {
+        panelId: p._id,
+        moduleId: mod._id,
+        can_view: isSelected,
+        can_add: isSelected,
+        can_edit: isSelected,
+        can_delete: isSelected,
+      };
+    });
 
     if (permsToInsert.length > 0) {
       await PanelPermission.insertMany(permsToInsert);
@@ -343,13 +346,13 @@ export const syncModules = async (req, res) => {
     const existingMap = new Map(existingModules.map(m => [m.key, m]));
     const activeKeys = new Set(uniqueModulesList.map(m => m.key));
 
-    // 1. Delete modules not in active keys
-    for (const ext of existingModules) {
-      if (!activeKeys.has(ext.key)) {
-        await PanelPermission.deleteMany({ moduleId: ext._id });
-        await ext.deleteOne();
-      }
-    }
+    // 1. Skip deleting modules not in active keys to prevent wiping out dynamically created modules
+    // for (const ext of existingModules) {
+    //   if (!activeKeys.has(ext.key)) {
+    //     await PanelPermission.deleteMany({ moduleId: ext._id });
+    //     await ext.deleteOne();
+    //   }
+    // }
 
     // Refresh existing map
     const refreshedExisting = await Module.find();
@@ -516,7 +519,7 @@ export const updatePermissionMatrix = async (req, res) => {
 
 export const getUsersAndPanels = async (req, res) => {
   try {
-    const users = await User.find({}, 'name email phone role status').sort({ name: 1 });
+    const users = await User.find({}, 'name email phone role status country state cluster district').sort({ name: 1 });
     const userPanels = await UserPanel.find()
       .populate('panelId', 'name key')
       .populate('customPermissions.moduleId', 'name key');

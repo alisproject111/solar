@@ -15,9 +15,10 @@ const panelSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     }, // e.g., 'admin', 'partner_manager', 'partners', 'accounts', 'delivery'
-    description: {
+    level: {
       type: String,
-      default: '',
+      enum: ['Country', 'State', 'Cluster', 'District'],
+      default: 'Country',
     },
     companyId: {
       type: String,
