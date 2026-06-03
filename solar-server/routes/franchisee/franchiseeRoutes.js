@@ -4,6 +4,8 @@ import * as rewardController from '../../controllers/franchisee/franchiseeReward
 import * as goalController from '../../controllers/franchisee/franchiseeGoalController.js';
 import * as professionController from '../../controllers/franchisee/franchiseeProfessionController.js';
 import * as orderController from '../../controllers/franchisee/franchiseeOrderController.js';
+import * as dashboardController from '../../controllers/franchisee/franchiseeDashboardController.js';
+import { protect } from '../../middleware/auth.js';
 
 const router = express.Router();
 
@@ -23,6 +25,9 @@ router.delete('/rewards/:id', rewardController.deleteReward);
 // Redeem Settings
 router.get('/redeem-settings', rewardController.getRedeemSettings);
 router.post('/redeem-settings', rewardController.saveRedeemSettings);
+
+// Dashboard Stats (Protected route to get current user)
+router.get('/dashboard-stats', protect, dashboardController.getDashboardStats);
 
 // Onboarding Goals
 router.post('/goals', goalController.createGoal);

@@ -3,6 +3,7 @@ import TemporaryIncharge from '../../models/hr/TemporaryIncharge.js';
 import jwt from 'jsonwebtoken';
 import UserPanel from '../../models/users/UserPanel.js';
 import PanelPermission from '../../models/users/PanelPermission.js';
+import Attendance from '../../models/hr/Attendance.js';
 
 const buildMenuTree = (modules) => {
   const tree = [];
@@ -164,7 +165,27 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    await User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } });
+    const now = new Date();
+    await User.updateOne({ _id: user._id }, { $set: { lastLogin: now } });
+
+    // --- Attendance Tracking ---
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    
+    let attendance = await Attendance.findOne({
+      user: user._id,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (!attendance) {
+      attendance = new Attendance({
+        user: user._id,
+        date: startOfDay,
+        loginTime: now
+      });
+      await attendance.save();
+    }
+    // ---------------------------
 
     // Check for active Temporary In-charge assignments
     const today = new Date();
@@ -248,6 +269,53 @@ export const getMe = async (req, res) => {
       success: true,
       user: userObj,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (attendance) {
+      attendance.logoutTime = now;
+      
+      // Calculate total work minutes
+      const loginTime = attendance.loginTime ? new Date(attendance.loginTime) : now;
+      const totalMillis = now - loginTime;
+      let totalWorkMinutes = Math.floor(totalMillis / 60000);
+      
+      // Subtract break times
+      const breakMinutes = attendance.totalBreakMinutes || 0;
+      totalWorkMinutes -= breakMinutes;
+      
+      if (totalWorkMinutes < 0) totalWorkMinutes = 0;
+      
+      attendance.totalWorkMinutes = totalWorkMinutes;
+      
+      // Close any open breaks
+      if (attendance.breaks && attendance.breaks.length > 0) {
+          const lastBreak = attendance.breaks[attendance.breaks.length - 1];
+          if (!lastBreak.endTime) {
+              lastBreak.endTime = now;
+              lastBreak.durationMinutes = Math.floor((now - new Date(lastBreak.startTime)) / 60000);
+              attendance.totalBreakMinutes += lastBreak.durationMinutes;
+          }
+      }
+
+      await attendance.save();
+    }
+
+    res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
