@@ -31,6 +31,9 @@ export const getUserById = async (req, res) => {
     }
     res.status(200).json({ success: true, user });
   } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid user ID format' });
+    }
     res.status(500).json({ message: error.message });
   }
 };
