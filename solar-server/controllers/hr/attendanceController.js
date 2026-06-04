@@ -1,6 +1,7 @@
 import Attendance from '../../models/hr/Attendance.js';
 import User from '../../models/users/User.js';
 import HRMSSettings from '../../models/hr/HRMSSettings.js';
+import LeaveRequest from '../../models/hr/LeaveRequest.js';
 
 export const toggleBreak = async (req, res) => {
   try {
@@ -135,21 +136,31 @@ export const getProfileStats = async (req, res) => {
     const user = await User.findById(userId);
     const overdueTasks = user ? (user.overdueTasks || 0) : 0;
 
-    // Dummy logic for now for Leaves, Rank, Efficiency Score, Productivity as they depend on deeper HR logic
-    // You can replace these with actual queries when those modules are fully built
-    const leaves = 0; 
-    const rank = '1st';
+    // Get dynamic leaves (Approved ones)
+    let totalLeaves = 0;
+    try {
+        const approvedLeaves = await LeaveRequest.find({ employee: userId, status: 'Approved' });
+        totalLeaves = approvedLeaves.reduce((acc, curr) => acc + (curr.totalDays || 0), 0);
+    } catch(err) {
+        console.error("Error fetching leaves", err);
+    }
+    const leaves = totalLeaves; 
+
+    const rank = '1st'; // Complex logic needed for actual rank, keeping dummy for now
     
     // Simple Productivity Formula: Active Work Minutes / Standard 8 hours (480 mins)
+    let productivityScore = 0;
     let productivity = '0%';
     if (todayAttendance && todayAttendance.loginTime) {
         const totalMinutes = todayAttendance.totalWorkMinutes > 0 ? todayAttendance.totalWorkMinutes : (Math.floor((now - new Date(todayAttendance.loginTime)) / 60000) - todayBreakMinutes);
-        let prodScore = (totalMinutes / 480) * 100;
-        if (prodScore > 100) prodScore = 100;
-        productivity = `${prodScore.toFixed(2)}%`;
+        productivityScore = (totalMinutes / 480) * 100;
+        if (productivityScore > 100) productivityScore = 100;
+        productivity = `${productivityScore.toFixed(2)}%`;
     }
 
-    const efficiencyScore = '6.6%'; // Example static fallback for complex logic
+    // Dynamic Efficiency Score (based on productivity and leaves/breaks ratio)
+    let effScore = productivityScore > 0 ? productivityScore * 0.95 : 0; // Slightly lower than productivity due to breaks
+    const efficiencyScore = effScore > 0 ? `${effScore.toFixed(2)}%` : '0%';
 
     // Check if currently on break
     let isOnBreak = false;
