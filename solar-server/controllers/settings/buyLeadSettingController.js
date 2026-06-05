@@ -4,7 +4,13 @@ import BuyLeadSettingLead from '../../models/marketing/BuyLeadSettingLead.js';
 // Get all lead settings
 export const getAllSettings = async (req, res) => {
     try {
-        const settings = await BuyLeadSetting.find().sort({ createdAt: -1 });
+        const { district, cluster, status } = req.query;
+        let filter = {};
+        if (district) filter.district = district;
+        if (cluster) filter.cluster = cluster;
+        if (status) filter.status = status;
+        
+        const settings = await BuyLeadSetting.find(filter).sort({ createdAt: -1 });
         res.status(200).json(settings);
     } catch (error) {
         res.status(500).json({ message: error.message });

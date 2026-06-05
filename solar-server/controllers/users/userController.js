@@ -3,12 +3,14 @@ import Statistics from '../../models/admin/Statistics.js';
 
 export const getAllUsers = async (req, res) => {
   try {
-    const { role, status, state } = req.query;
+    const { role, status, state, district, cluster } = req.query;
     let filter = {};
 
     if (role) filter.role = role;
     if (status) filter.status = status;
     if (state) filter.state = state;
+    if (district) filter.district = district;
+    if (cluster) filter.cluster = cluster;
 
     const users = await User.find(filter)
       .select('-password')
