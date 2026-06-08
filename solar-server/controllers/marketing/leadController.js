@@ -2,7 +2,7 @@ import Lead from '../../models/marketing/Lead.js';
 
 export const createLead = async (req, res, next) => {
     try {
-        const { name, mobile, whatsapp, email, district, city, solarType, subType, kw, billAmount } = req.body;
+        const { name, mobile, whatsapp, email, district, city, cluster, solarType, subType, kw, billAmount } = req.body;
         console.log('User in createLead:', req.user);
 
 
@@ -13,6 +13,7 @@ export const createLead = async (req, res, next) => {
             email,
             district,
             city,
+            cluster,
             solarType,
             subType,
             kw,
@@ -29,11 +30,18 @@ export const createLead = async (req, res, next) => {
 
 export const getAllLeads = async (req, res, next) => {
     try {
-        const { status, search, district } = req.query;
-        const query = { isActive: true, dealer: req.user.id };
+        const { status, search, district, city, cluster } = req.query;
+        const query = { isActive: true };
+        
+        // Only restrict if user is a dealer
+        if (req.user.role === 'dealer' || req.user.role === 'dealerManager') {
+            query.dealer = req.user.id;
+        }
 
         if (status && status !== 'All') query.status = status;
         if (district && district !== 'All') query.district = district;
+        if (city && city !== 'All') query.city = city;
+        if (cluster && cluster !== 'All') query.cluster = cluster;
 
         if (search) {
             query.$or = [
@@ -45,6 +53,7 @@ export const getAllLeads = async (req, res, next) => {
         const leads = await Lead.find(query)
             .populate('district', 'name')
             .populate('city', 'name')
+            .populate('cluster', 'name')
             .sort({ createdAt: -1 });
 
         res.json({ success: true, count: leads.length, data: leads });
@@ -57,7 +66,8 @@ export const getLeadById = async (req, res, next) => {
     try {
         const lead = await Lead.findOne({ _id: req.params.id, dealer: req.user.id })
             .populate('district', 'name')
-            .populate('city', 'name');
+            .populate('city', 'name')
+            .populate('cluster', 'name');
 
         if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
@@ -82,6 +92,29 @@ export const updateLead = async (req, res, next) => {
         }
 
         await lead.save();
+        res.json({ success: true, data: lead });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const assignLead = async (req, res, next) => {
+    try {
+        const { assignedTo, assignedToType } = req.body;
+        let lead = await Lead.findById(req.params.id);
+
+        if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+
+        lead.assignedTo = assignedTo;
+        lead.assignedToType = assignedToType;
+        lead.status = 'Assigned';
+        lead.history.push({ action: `Assigned to ${assignedToType}`, by: req.user.id });
+
+        await lead.save();
+        
+        // Populate for return
+        await lead.populate('assignedTo', 'name');
+        
         res.json({ success: true, data: lead });
     } catch (err) {
         next(err);

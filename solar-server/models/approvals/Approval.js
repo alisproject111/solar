@@ -10,6 +10,8 @@ const approvalSchema = new mongoose.Schema({
             'dealer',
             'installer',
             'franchisee',
+            'districtManager',
+            'dealerManager',
             'combokit',
             'inventory',
             'ticket',

@@ -76,13 +76,23 @@ const leadSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['New', 'SurveyPending', 'SurveyCompleted', 'QuoteGenerated', 'ProjectStart', 'ProjectSigned', 'Converted'],
+            enum: ['New', 'Assigned', 'SurveyPending', 'SurveyCompleted', 'QuoteGenerated', 'ProjectStart', 'ProjectSigned', 'Converted'],
             default: 'New'
         },
         dealer: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: true
+            required: false
+        },
+        assignedTo: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null
+        },
+        assignedToType: {
+            type: String,
+            enum: ['Dealer', 'District Manager'],
+            default: null
         },
         history: [{
             action: String,

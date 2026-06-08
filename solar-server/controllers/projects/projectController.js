@@ -169,7 +169,8 @@ export const createProject = async (req, res, next) => {
     try {
         const {
             projectId, projectName, category, projectType, totalKW,
-            status, statusStage, dueDate, state, district, cluster, cp
+            status, statusStage, dueDate, state, district, cluster, cp,
+            mobile, email, numberOfPanels
         } = req.body;
 
         if (!projectId || !projectName || !state) {
@@ -189,6 +190,9 @@ export const createProject = async (req, res, next) => {
             district,
             cluster,
             cp,
+            mobile,
+            email,
+            numberOfPanels,
             createdBy: req.user?.id,
         });
 

@@ -41,6 +41,10 @@ const projectSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    numberOfPanels: {
+      type: Number,
+      default: 0
+    },
     totalAmount: {
       type: Number,
       default: 0

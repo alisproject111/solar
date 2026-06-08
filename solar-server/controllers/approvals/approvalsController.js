@@ -1,5 +1,6 @@
 import Approval from '../../models/approvals/Approval.js';
 import ProcurementOrder from '../../models/orders/ProcurementOrder.js';
+import User from '../../models/users/User.js';
 
 // Get Approvals with filters
 export const getApprovals = async (req, res) => {
@@ -14,8 +15,13 @@ export const getApprovals = async (req, res) => {
         // Location filters - allow filtering by state, cluster, district
         // Note: Assuming the frontend sends these as query params
         if (state && state !== 'All') query['location.state'] = state;
-        if (district && district !== 'All') query['location.district'] = district;
         if (cluster && cluster !== 'All') query['location.cluster'] = cluster;
+        if (district && district !== 'All') {
+            query['location.district'] = district;
+            // District is specific enough. Remove cluster filter to ensure we match 
+            // documents that might not have saved the location.cluster field.
+            delete query['location.cluster'];
+        }
 
         const approvals = await Approval.find(query).sort({ createdAt: -1 });
 
@@ -77,6 +83,49 @@ export const updateApprovalStatus = async (req, res) => {
                 } catch (syncErr) {
                     console.error("Failed to sync status with ProcurementOrder", syncErr);
                 }
+            }
+        }
+
+        // CREATE USER FOR DISTRICT MANAGER APPROVAL
+        if (status === 'Approved' && updatedApproval.type === 'districtManager') {
+            try {
+                const formData = updatedApproval.data;
+                const user = new User({
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    role: formData.role || 'franchiseeManager', // or whatever role corresponds to district manager
+                    status: 'active', // Since it's approved by admin
+                    district: formData.districtId || formData.district, // Prefer ObjectId if string name was passed in district
+                    state: formData.state,
+                    password: formData.password || 'defaultPassword123'
+                });
+                await user.save();
+                console.log(`✅ District Manager User created successfully for approval ${updatedApproval._id}`);
+            } catch (userErr) {
+                console.error("Failed to create User from districtManager approval", userErr);
+                // Optionally handle rollback or notification if user creation fails
+            }
+        }
+
+        // CREATE USER FOR DEALER MANAGER APPROVAL
+        if (status === 'Approved' && updatedApproval.type === 'dealerManager') {
+            try {
+                const formData = updatedApproval.data;
+                const user = new User({
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    role: formData.role || 'dealerManager',
+                    status: 'active',
+                    district: formData.districtId || formData.district,
+                    state: formData.state,
+                    password: formData.password || 'defaultPassword123'
+                });
+                await user.save();
+                console.log(`✅ Dealer Manager User created successfully for approval ${updatedApproval._id}`);
+            } catch (userErr) {
+                console.error("Failed to create User from dealerManager approval", userErr);
             }
         }
 
