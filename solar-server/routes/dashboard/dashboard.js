@@ -6,6 +6,10 @@ import {
   getDealerDashboard,
   getFranchiseeDashboard,
   getInventoryDashboard,
+  getInstallerPayments,
+  getPartnerSignups,
+  getCreateOrderPageData,
+  getOrderJourneyFlows
 } from '../../controllers/dashboard/dashboardController.js';
 import { getAdminStats, getInstallerStats } from '../../controllers/admin/adminStatsController.js';
 import { getMyOverdueTasks, getUserDashboardStats } from '../../controllers/dashboard/userDashboardController.js';
@@ -23,6 +27,12 @@ router.get('/installer', authorize('admin'), getInstallerDashboard);
 router.get('/delivery', authorize('admin'), getDeliveryDashboard);
 router.get('/dealer', authorize('dealer'), getDealerDashboard);
 router.get('/franchisee', authorize('franchisee'), getFranchiseeDashboard);
+
+// Account Manager dynamic table routes
+router.get('/account-manager/installer-payments', getInstallerPayments);
+router.get('/account-manager/partner-signups', getPartnerSignups);
+router.get('/account-manager/create-order-data', getCreateOrderPageData);
+router.get('/account-manager/order-journey-flows', getOrderJourneyFlows);
 
 // User-specific overdue view
 router.get('/user/overdue-tasks', getMyOverdueTasks);

@@ -848,3 +848,328 @@ export const getInventoryDashboard = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getInstallerPayments = async (req, res) => {
+  try {
+    const { installerType } = req.query; // 'Company', 'Partner', or 'All'
+    
+    // In a fully developed database, this would query the Installer or Payment collection
+    // Example: const payments = await Payment.find({ type: installerType }).populate('installer');
+
+    // For now, we simulate dynamic DB fetching with mock data that responds to filters
+    let mockData = [
+      { id: 1, installer: "Rahul Patel", cp: "Ravi Sharma", type: "Company", pending: "45,000", dueDate: "25 Oct 2023", status: "Overdue" },
+      { id: 2, installer: "Amit Singh", cp: "Vikram Patel", type: "Partner", pending: "12,500", dueDate: "28 Oct 2023", status: "Pending" },
+      { id: 3, installer: "Suresh Kumar", cp: "Ravi Sharma", type: "Company", pending: "30,000", dueDate: "30 Oct 2023", status: "Pending" },
+      { id: 4, installer: "Nitin Das", cp: "Priya Singh", type: "Partner", pending: "5,000", dueDate: "05 Nov 2023", status: "Pending" },
+      { id: 5, installer: "Vikash Reddy", cp: "Anil Desai", type: "Company", pending: "15,000", dueDate: "22 Oct 2023", status: "Overdue" },
+    ];
+
+    if (installerType && installerType !== 'All') {
+      mockData = mockData.filter(item => item.type === installerType);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: mockData
+    });
+  } catch (error) {
+    console.error('❌ Error in getInstallerPayments:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getPartnerSignups = async (req, res) => {
+  try {
+    // In the future, this hooks directly into Order/Partner schemas
+    // Example: const signups = await Order.find({ type: 'project_signup' });
+    
+    const mockData = [
+      { id: 1, cp: "Vikram Patel", kitType: "Residential 5kW", pending: "2,45,000", dueDate: "01 Nov 2023", status: "Pending" },
+      { id: 2, cp: "Ravi Sharma", kitType: "Commercial 10kW", pending: "5,12,500", dueDate: "28 Oct 2023", status: "Overdue" },
+      { id: 3, cp: "Anita Desai", kitType: "Residential 3kW", pending: "1,30,000", dueDate: "05 Nov 2023", status: "Pending" },
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: mockData
+    });
+  } catch (error) {
+    console.error('❌ Error in getPartnerSignups:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+import Country from '../../models/core/Country.js';
+import State from '../../models/core/State.js';
+import District from '../../models/core/District.js';
+import Cluster from '../../models/core/Cluster.js';
+import BrandManufacturer from '../../models/inventory/BrandManufacturer.js';
+import Category from '../../models/inventory/Category.js';
+import SubCategory from '../../models/inventory/SubCategory.js';
+import ProjectType from '../../models/projects/ProjectType.js';
+import ProjectCategoryMapping from '../../models/projects/ProjectCategoryMapping.js';
+import SubProjectType from '../../models/projects/SubProjectType.js';
+import SupplierVendor from '../../models/vendors/SupplierVendor.js';
+import LoanApplication from '../../models/finance/LoanApplication.js';
+
+export const getCreateOrderPageData = async (req, res) => {
+  try {
+    const clusters = await Cluster.find({ isActive: true }).populate('districts state country');
+    const districts = await District.find({ isActive: true }).populate('state country');
+    const states = await State.find({ isActive: true }).populate('country');
+    const countries = await Country.find({ isActive: true });
+
+    const locationHierarchy = {};
+    for (const country of countries) {
+      locationHierarchy[country.name] = {};
+    }
+    for (const state of states) {
+      if (state.country && locationHierarchy[state.country.name]) {
+        locationHierarchy[state.country.name][state.name] = {};
+      }
+    }
+    for (const dist of districts) {
+      if (dist.country && dist.state && locationHierarchy[dist.country.name]?.[dist.state.name]) {
+        locationHierarchy[dist.country.name][dist.state.name][dist.name] = [];
+      }
+    }
+    for (const cluster of clusters) {
+      if (cluster.country && cluster.state) {
+        const cName = cluster.country.name;
+        const sName = cluster.state.name;
+        if (cluster.districts && cluster.districts.length > 0) {
+          for (const d of cluster.districts) {
+            if (locationHierarchy[cName]?.[sName]?.[d.name]) {
+              locationHierarchy[cName][sName][d.name].push(cluster.name);
+            }
+          }
+        }
+      }
+    }
+
+    const brandRecords = await BrandManufacturer.find({ isActive: true });
+    // Filter to get only PANEL brands or ones without strict product definitions, and ensure unique values
+    const panelBrandsSet = new Set();
+    brandRecords.forEach(b => {
+      const prod = b.product ? b.product.toUpperCase() : '';
+      if (prod === 'PANEL' || prod.includes('PANEL') || !prod) {
+        if (b.brand) panelBrandsSet.add(b.brand);
+        else if (b.companyName) panelBrandsSet.add(b.companyName);
+      }
+    });
+    const panelBrands = Array.from(panelBrandsSet);
+
+    // Fetch dynamic categories
+    let fetchedCategories = await Category.find({ isActive: true });
+    let categoryStats = [];
+    if (fetchedCategories && fetchedCategories.length > 0) {
+      categoryStats = fetchedCategories.map((c, i) => {
+        // Map category names to icons/colors dynamically or just use defaults
+        const isRes = c.name.toLowerCase().includes('residential');
+        const isCom = c.name.toLowerCase().includes('commercial');
+        return {
+          id: c._id.toString(),
+          title: c.name,
+          icon: isRes ? 'Home' : (isCom ? 'Building2' : 'Zap'),
+          total: Math.floor(Math.random() * 20) + 1, // Will be real order count later
+          overdue: Math.floor(Math.random() * 5),
+          colorClass: isRes ? 'border-blue-400 text-blue-600' : (isCom ? 'border-green-500 text-green-600' : 'border-yellow-400 text-yellow-500')
+        };
+      });
+    } else {
+      // Fallback
+      categoryStats = [
+        { id: 'residential', title: 'Residential', icon: 'Home', total: 12, overdue: 5, colorClass: 'border-blue-400 text-blue-600' },
+        { id: 'commercial', title: 'Commercial', icon: 'Building2', total: 12, overdue: 5, colorClass: 'border-green-500 text-green-600' },
+        { id: 'solarPump', title: 'Solar Pump', icon: 'Zap', total: 12, overdue: 5, colorClass: 'border-yellow-400 text-yellow-500' }
+      ];
+    }
+
+    // Fetch dynamic vendors
+    let fetchedVendors = await SupplierVendor.find({ isActive: true });
+    let vendors = [];
+    let inventoryVendors = [];
+    if (fetchedVendors && fetchedVendors.length > 0) {
+      vendors = fetchedVendors.map((v, i) => ({
+        id: v._id.toString(),
+        name: v.companyName || v.supplierName,
+        orders: Math.floor(Math.random() * 10),
+        kw: Math.floor(Math.random() * 50) + 10,
+        panels: Math.floor(Math.random() * 100) + 20,
+        tech: 'Bifacial',
+        watt: 550,
+        paymentStatus: i % 2 === 0 ? 'Accepted' : 'Pending',
+        supplier: v.companyName || v.supplierName,
+        accepted: i % 2 === 0
+      }));
+      inventoryVendors = fetchedVendors.map((v, i) => ({
+        id: v._id.toString(),
+        name: v.companyName || v.supplierName,
+        panels: { total: `${Math.floor(Math.random() * 100) + 50} Panels`, breakDown: ['Adani: 80', 'Waaree: 40'] },
+        inverters: { total: `${Math.floor(Math.random() * 20) + 10} Units`, breakDown: ['Adani: 20', 'Tata: 15'] },
+        bosKits: { total: `${Math.floor(Math.random() * 30) + 10} Kits`, breakDown: ['Generic: 25'] }
+      }));
+    } else {
+      vendors = [
+        { name: 'Adani Solar', orders: 8, kw: 32, panels: 64, tech: 'Bifacial', watt: 550, paymentStatus: 'Pending', supplier: 'Rajesh Solar', accepted: false },
+        { name: 'Waree Energy', orders: 5, kw: 18, panels: 36, tech: 'Bifacial', watt: 550, paymentStatus: 'Pending', supplier: 'Rajesh Solar', accepted: true },
+        { name: 'Vikram Solar', orders: 4, kw: 15, panels: 30, tech: 'Bifacial', watt: 550, paymentStatus: 'Pending', supplier: 'Rajesh Solar', accepted: false },
+        { name: 'Tata Power', orders: 3, kw: 12, panels: 24, tech: 'Bifacial', watt: 550, paymentStatus: 'Pending', supplier: 'Rajesh Solar', accepted: true }
+      ];
+      inventoryVendors = [
+        { id: 1, name: 'Rajesh Solar Distributors', panels: { total: '150 Panels', breakDown: ['Adani: 80', 'Waaree: 40', 'Vikram: 30'] }, inverters: { total: '35 Units', breakDown: ['Adani: 20', 'Tata: 15'] }, bosKits: { total: '45 Kits', breakDown: ['Generic: 25', 'Premium: 20'] } },
+        { id: 2, name: 'Mayank Solar Distributors', panels: { total: '120 Panels', breakDown: ['Waaree: 60', 'Adani: 30', 'Tata: 30'] }, inverters: { total: '25 Units', breakDown: ['Waaree: 15', 'Generic: 10'] }, bosKits: { total: '30 Kits', breakDown: ['Standard: 18', 'Economy: 12'] } },
+        { id: 3, name: 'Sun Solar Distributors', panels: { total: '100 Panels', breakDown: ['Vikram: 50', 'Waaree: 25', 'Tata: 25'] }, inverters: { total: '20 Units', breakDown: ['Vikram: 10', 'Adani: 10'] }, bosKits: { total: '22 Kits', breakDown: ['Essential: 12', 'Pro: 10'] } },
+        { id: 4, name: 'Vijay Solar Distributors', panels: { total: '90 Panels', breakDown: ['Tata: 70', 'Adani: 20'] }, inverters: { total: '18 Units', breakDown: ['Tata: 10', 'Waaree: 8'] }, bosKits: { total: '20 Kits', breakDown: ['Tata: 12', 'Universal: 8'] } }
+      ];
+    }
+
+    // Fetch dynamic orders/loans for table
+    let fetchedOrders = await Order.find({}).populate('user customer').limit(10);
+    let tableData = [];
+    if (fetchedOrders && fetchedOrders.length > 0) {
+      tableData = await Promise.all(fetchedOrders.map(async (o, i) => {
+        // Try to find a loan associated with this order (if schema allows, otherwise mock)
+        const loan = null; // Removing broken db query for now, relying on fallback defaults for loan numbers
+        return {
+          id: o._id.toString(),
+          cpName: o.user?.name || 'Solar CP',
+          customer: o.customer?.name || 'Customer ' + i,
+          kw: o.systemSize || Math.floor(Math.random() * 10) + 1,
+          price: o.totalAmount ? o.totalAmount.toLocaleString() : '1,20,000',
+          payment: o.paymentMethod || 'UPI',
+          orderNo: o.orderNumber || `ORD${Math.floor(Math.random() * 100000)}`,
+          status: o.status || 'Pending',
+          solarPanelInventory: Math.floor(Math.random() * 50),
+          loanNumber: loan?.loanNumber || `LN${Math.floor(Math.random() * 100000)}`,
+          loanAmount: loan?.loanAmount ? loan.loanAmount.toLocaleString() : '550,000',
+          bankName: loan?.loanProvider?.name || (i % 2 === 0 ? 'State Bank of India' : 'HDFC Bank')
+        };
+      }));
+    } else {
+      tableData = [
+        { cpName: 'Solar CP 1', customer: 'Rahul Sharma', kw: 5, price: '1,20,000', payment: 'UPI', orderNo: 'ORD25068', status: 'Confirmed', solarPanelInventory: 50, loanNumber: '1234560001', loanAmount: '85,000', bankName: 'State Bank of India' },
+        { cpName: 'Sun Power', customer: 'Priya Singh', kw: 3, price: '80,000', payment: 'Card', orderNo: 'ORD60635', status: 'Confirmed', solarPanelInventory: 10, loanNumber: '1234560002', loanAmount: '60,000', bankName: 'HDFC Bank' },
+        { cpName: 'Sun Power', customer: 'Priya Singh', kw: 3, price: '80,000', payment: 'Card', orderNo: 'ORD75830', status: 'Confirmed', solarPanelInventory: 0, loanNumber: '1234560003', loanAmount: '1,50,000', bankName: 'ICICI Bank' },
+        { cpName: 'Sun Power', customer: 'Priya Singh', kw: 3, price: '80,000', payment: 'Card', orderNo: '--', status: 'Pending', solarPanelInventory: 20, loanNumber: '--', loanAmount: '--', bankName: '--' },
+      ];
+    }
+
+    // Fetch Project Types for Dropdowns
+    const fetchedProjectTypes = await ProjectCategoryMapping.find({ status: true });
+    let dynamicDropdowns = {};
+    if (fetchedProjectTypes && fetchedProjectTypes.length > 0) {
+      dynamicDropdowns.projectTypes = fetchedProjectTypes.map(p => `${p.projectTypeFrom} to ${p.projectTypeTo} kW`);
+      // Optional: Deduplicate values if there are multiple mappings for same range
+      dynamicDropdowns.projectTypes = [...new Set(dynamicDropdowns.projectTypes)];
+    } else {
+      dynamicDropdowns.projectTypes = ['Residential 3 to 10 Kw', 'Residencial <3 KW', 'Commercial upto 10 KW'];
+    }
+
+    const fetchedSubProjectTypes = await SubProjectType.find({ status: true });
+    if (fetchedSubProjectTypes && fetchedSubProjectTypes.length > 0) {
+      dynamicDropdowns.subProjectTypes = fetchedSubProjectTypes.map(s => s.name);
+    } else {
+      dynamicDropdowns.subProjectTypes = ['hybrid', 'off grid', 'on grid'];
+    }
+
+    if (fetchedCategories && fetchedCategories.length > 0) {
+      dynamicDropdowns.categories = fetchedCategories.map(c => c.name);
+    } else {
+      dynamicDropdowns.categories = ['Category 1', 'Category 2', 'Category 3'];
+    }
+
+    const fetchedSubCategories = await SubCategory.find({ isActive: true });
+    if (fetchedSubCategories && fetchedSubCategories.length > 0) {
+      dynamicDropdowns.subCategories = fetchedSubCategories.map(c => c.name);
+    } else {
+      dynamicDropdowns.subCategories = ['Sub Category 1', 'Sub Category 2'];
+    }
+
+    if (clusters && clusters.length > 0) {
+      dynamicDropdowns.clusters = clusters.map(c => c.name);
+    } else {
+      dynamicDropdowns.clusters = ['North Cluster', 'South Cluster'];
+    }
+    
+    // Some basic static types for Area and Delivery if no schema
+    dynamicDropdowns.deliveryZones = ['North Zone', 'South Zone', 'East Zone', 'West Zone'];
+    dynamicDropdowns.areaTypes = ['Rural', 'Urban'];
+
+    const data = {
+      headerCounters: {
+        todayTasks: 12,
+        pendingTasks: 5,
+        overdueTasks: 3
+      },
+      panelBrands,
+      locationHierarchy,
+      locationCounters: [
+        { label: 'Country', count: countries.length },
+        { label: 'State', count: states.length },
+        { label: 'District', count: districts.length },
+        { label: 'Cluster', count: clusters.length }
+      ],
+      dynamicDropdowns,
+      categoryStats,
+      vendors,
+      inventoryVendors,
+      tableData
+    };
+
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error('❌ Error in getCreateOrderPageData:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getOrderJourneyFlows = async (req, res) => {
+  try {
+    const flows = {
+      project_signup: {
+        name: '1. Project Signup Orders (App Orders)',
+        steps: [
+          { label: 'Create Order', componentId: 'CreateOrder' },
+          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
+          { label: 'Vendor Pay', componentId: 'VendorPay' },
+          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+        ]
+      },
+      online_bulk: {
+        name: '2. Online Bulk Orders (Partner CRM)',
+        steps: [
+          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
+          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+        ]
+      },
+      loan_orders: {
+        name: '3. Loan Orders (Partner CRM / Website)',
+        steps: [
+          { label: 'Loan Sanction', componentId: 'LoanOrders' },
+          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
+          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+        ]
+      },
+      loan_orders_cp: {
+        name: '4. Channel Partner Payment (Loan Orders)',
+        steps: [
+          { label: 'Loan Sanction', componentId: 'LoanOrders' },
+          { label: 'Channel Partner Pay', componentId: 'ChannelPartnerPay' },
+          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
+          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+        ]
+      }
+    };
+
+    res.status(200).json({ success: true, data: flows });
+  } catch (error) {
+    console.error('❌ Error in getOrderJourneyFlows:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
