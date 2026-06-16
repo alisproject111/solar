@@ -912,6 +912,8 @@ import ProjectCategoryMapping from '../../models/projects/ProjectCategoryMapping
 import SubProjectType from '../../models/projects/SubProjectType.js';
 import SupplierVendor from '../../models/vendors/SupplierVendor.js';
 import LoanApplication from '../../models/finance/LoanApplication.js';
+import DeliveryType from '../../models/orders/DeliveryType.js';
+import Vehicle from '../../models/orders/Vehicle.js';
 
 export const getCreateOrderPageData = async (req, res) => {
   try {
@@ -929,20 +931,12 @@ export const getCreateOrderPageData = async (req, res) => {
         locationHierarchy[state.country.name][state.name] = {};
       }
     }
-    for (const dist of districts) {
-      if (dist.country && dist.state && locationHierarchy[dist.country.name]?.[dist.state.name]) {
-        locationHierarchy[dist.country.name][dist.state.name][dist.name] = [];
-      }
-    }
     for (const cluster of clusters) {
-      if (cluster.country && cluster.state) {
-        const cName = cluster.country.name;
-        const sName = cluster.state.name;
+      if (cluster.country && cluster.state && locationHierarchy[cluster.country.name]?.[cluster.state.name]) {
+        locationHierarchy[cluster.country.name][cluster.state.name][cluster.name] = [];
         if (cluster.districts && cluster.districts.length > 0) {
           for (const d of cluster.districts) {
-            if (locationHierarchy[cName]?.[sName]?.[d.name]) {
-              locationHierarchy[cName][sName][d.name].push(cluster.name);
-            }
+            locationHierarchy[cluster.country.name][cluster.state.name][cluster.name].push(d.name);
           }
         }
       }
@@ -1097,6 +1091,22 @@ export const getCreateOrderPageData = async (req, res) => {
     dynamicDropdowns.deliveryZones = ['North Zone', 'South Zone', 'East Zone', 'West Zone'];
     dynamicDropdowns.areaTypes = ['Rural', 'Urban'];
 
+    // Fetch Delivery Types
+    const fetchedDeliveryTypes = await DeliveryType.find({ status: true });
+    if (fetchedDeliveryTypes && fetchedDeliveryTypes.length > 0) {
+      dynamicDropdowns.deliveryTypes = fetchedDeliveryTypes.map(d => d.name);
+    } else {
+      dynamicDropdowns.deliveryTypes = ['Standard', 'Express', 'Prime'];
+    }
+
+    // Fetch Vehicle Types
+    const fetchedVehicles = await Vehicle.find({ status: true });
+    if (fetchedVehicles && fetchedVehicles.length > 0) {
+      dynamicDropdowns.vehicleTypes = fetchedVehicles.map(v => v.name);
+    } else {
+      dynamicDropdowns.vehicleTypes = ['Truck', 'Van', 'Bike'];
+    }
+
     const data = {
       headerCounters: {
         todayTasks: 12,
@@ -1132,8 +1142,9 @@ export const getOrderJourneyFlows = async (req, res) => {
         name: '1. Project Signup Orders (App Orders)',
         steps: [
           { label: 'Create Order', componentId: 'CreateOrder' },
-          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
-          { label: 'Vendor Pay', componentId: 'VendorPay' },
+          { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
+          { label: 'Vendor select', componentId: 'VendorPay' },
+          { label: 'At warehouse', componentId: 'AtWarehouse' },
           { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
           { label: 'Delivery Management', componentId: 'DeliveryManagement' },
         ]
@@ -1142,7 +1153,7 @@ export const getOrderJourneyFlows = async (req, res) => {
         name: '2. Online Bulk Orders (Partner CRM)',
         steps: [
           { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
-          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
+          { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
           { label: 'Delivery Management', componentId: 'DeliveryManagement' },
         ]
       },
@@ -1151,7 +1162,7 @@ export const getOrderJourneyFlows = async (req, res) => {
         steps: [
           { label: 'Loan Sanction', componentId: 'LoanOrders' },
           { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
-          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
+          { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
           { label: 'Delivery Management', componentId: 'DeliveryManagement' },
         ]
       },
@@ -1161,7 +1172,7 @@ export const getOrderJourneyFlows = async (req, res) => {
           { label: 'Loan Sanction', componentId: 'LoanOrders' },
           { label: 'Channel Partner Pay', componentId: 'ChannelPartnerPay' },
           { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
-          { label: 'Procurement', componentId: 'ProcurementPlaceholder' },
+          { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
           { label: 'Delivery Management', componentId: 'DeliveryManagement' },
         ]
       }
