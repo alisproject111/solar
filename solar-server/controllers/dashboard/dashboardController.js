@@ -1138,12 +1138,24 @@ export const getCreateOrderPageData = async (req, res) => {
 export const getOrderJourneyFlows = async (req, res) => {
   try {
     const flows = {
-      project_signup: {
-        name: '1. Project Signup Orders (App Orders)',
+      project_signup_vendor: {
+        name: '1. Project Signup - Vendor Inventory',
         steps: [
-          { label: 'Create Order', componentId: 'CreateOrder' },
-          { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
-          { label: 'Vendor select', componentId: 'VendorPay' },
+          { label: 'Create Order & Gen PI', componentId: 'CreateOrder' },
+          { label: 'Generate Order Number', componentId: 'GenerateOrderNumberPlaceholder' },
+          { label: 'Customer Payment', componentId: 'CustomerPaymentPlaceholder' },
+          { label: 'Accounts Verification', componentId: 'AccountsVerificationPlaceholder' },
+          { label: 'Generate Procurement No.', componentId: 'GenerateProcurementNumberPlaceholder' },
+          { label: 'Vendor Payment', componentId: 'VendorPay' },
+          { label: 'At warehouse', componentId: 'AtWarehouse' },
+          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+        ]
+      },
+      project_signup_warehouse: {
+        name: '1. Project Signup - Warehouse Inventory',
+        steps: [
+          { label: 'Create Order & Gen PI', componentId: 'CreateOrder' },
           { label: 'At warehouse', componentId: 'AtWarehouse' },
           { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
           { label: 'Delivery Management', componentId: 'DeliveryManagement' },
