@@ -1143,22 +1143,17 @@ export const getOrderJourneyFlows = async (req, res) => {
         steps: [
           { label: 'Create Order & Gen PI', componentId: 'CreateOrder' },
           { label: 'Generate Order Number', componentId: 'GenerateOrderNumberPlaceholder' },
-          { label: 'Customer Payment', componentId: 'CustomerPaymentPlaceholder' },
-          { label: 'Accounts Verification', componentId: 'AccountsVerificationPlaceholder' },
-          { label: 'Generate Procurement No.', componentId: 'GenerateProcurementNumberPlaceholder' },
-          { label: 'Vendor Payment', componentId: 'VendorPay' },
-          { label: 'At warehouse', componentId: 'AtWarehouse' },
-          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
-          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+          { label: 'Procurement Number', componentId: 'VendorPay' },
+          { label: 'At Warehouse', componentId: 'AtWarehouse' },
+          { label: 'Delivery Plan', componentId: 'DeliveryPlan' }
         ]
       },
       project_signup_warehouse: {
         name: '1. Project Signup - Warehouse Inventory',
         steps: [
           { label: 'Create Order & Gen PI', componentId: 'CreateOrder' },
-          { label: 'At warehouse', componentId: 'AtWarehouse' },
-          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
-          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+          { label: 'At Warehouse', componentId: 'AtWarehouse' },
+          { label: 'Delivery Plan', componentId: 'DeliveryPlan' }
         ]
       },
       online_bulk: {
