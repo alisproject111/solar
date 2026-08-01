@@ -2,38 +2,132 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, Zap, Settings } from 'lucide-react';
 import api from '../../../../api/axios';
 
-export default function VendorPay({ onNext }) {
-  const tableData = [
-    {
-      vendorName: 'Rajesh Solar Distributors', brand: 'Adani', product: 'Solar Panel', technology: 'Bifacial', projectType: 'Residential', wattPeak: '550W', totalKW: '55 KW', totalPanels: '100', totalPrice: '95,000', deadline: '2025-07-05'
-    },
-    {
-      vendorName: 'Mayank Solar Pvt Ltd', brand: 'Waaree', product: 'Inverter', technology: 'Monofacial', projectType: 'Commercial', wattPeak: '650W', totalKW: '45 KW', totalPanels: '90', totalPrice: '88,000', deadline: '2025-07-07'
-    },
-    {
-      vendorName: 'Vikram Energy Solutions', brand: 'Vikram', product: 'BOS Kit', technology: 'Polycrystalline', projectType: 'Residential', wattPeak: '500W', totalKW: '30 KW', totalPanels: '60', totalPrice: '78,500', deadline: '2025-07-10'
-    },
-    {
-      vendorName: 'Green Energy Solutions', brand: 'Tata', product: 'Solar Panel', technology: 'Monocrystalline', projectType: 'Residential', wattPeak: '600W', totalKW: '48 KW', totalPanels: '80', totalPrice: '1,05,000', deadline: '2025-07-12'
-    },
-    {
-      vendorName: 'Solar Tech India', brand: 'Adani', product: 'Inverter', technology: 'Hybrid', projectType: 'Residential', wattPeak: '700W', totalKW: '35 KW', totalPanels: '50', totalPrice: '92,500', deadline: '2025-07-15'
-    }
-  ];
+export default function VendorPay({ onNext, sharedOrderData }) {
+  const tableData = [];
 
-  const comboData = [
-    {
-      vendorName: 'Rajesh Solar Distributors', brand: 'Mixed', product: '5KW On-Grid Combo Kit', technology: 'Bifacial', projectType: 'Residential', wattPeak: '-', totalKW: '5 KW', totalPanels: '10', totalPrice: '2,50,000', deadline: '2025-07-05'
-    },
-    {
-      vendorName: 'Green Energy Solutions', brand: 'Tata', product: '10KW Hybrid Combo Kit', technology: 'Monocrystalline', projectType: 'Commercial', wattPeak: '-', totalKW: '10 KW', totalPanels: '18', totalPrice: '5,00,000', deadline: '2025-07-12'
-    }
-  ];
+  const initialComboData = [];
 
   const [dashboardData, setDashboardData] = useState({});
   const [selectedRows, setSelectedRows] = useState([]);
   const [kitMode, setKitMode] = useState('ComboKit');
   const [componentFilter, setComponentFilter] = useState('All');
+  const [completedOrders, setCompletedOrders] = useState([]);
+  const [generatedOrdersCache, setGeneratedOrdersCache] = useState([]);
+  const [returnedOrders, setReturnedOrders] = useState([]);
+
+  useEffect(() => {
+    const loadVendorPayData = () => {
+      try {
+        const savedCompleted = JSON.parse(localStorage.getItem('completedVendorPayments') || '[]');
+        setCompletedOrders(savedCompleted);
+        
+        const savedGenerated = JSON.parse(localStorage.getItem('generatedVendorPayments') || '[]');
+        setGeneratedOrdersCache(savedGenerated);
+
+        // Load returned orders
+        const savedReturned = JSON.parse(localStorage.getItem('returnedToProcurementOrders') || '[]');
+        const storedInward = JSON.parse(localStorage.getItem('inwardOrdersData') || '[]');
+        
+        const inwardReturned = storedInward
+          .filter(item => item.status === 'Returned to Procurement' || item.deliveryStatus === 'Returned to Procurement')
+          .map(item => ({
+            orderId: item.orderNo || 'ORD-RET',
+            procurementNo: item.sku || `PROC-${item.orderNo || 'RET'}`,
+            vendorName: item.vendorName || 'Vendor',
+            brand: item.brand || 'Mixed',
+            product: `${item.vendorName || 'Customer'} (Returned Project)`,
+            technology: item.technology || 'Polycrystalline',
+            projectType: item.projectType || 'Commercial',
+            wattPeak: item.wattPeak || '-',
+            totalKW: item.totalKw || '-',
+            totalPanels: (item.totalUnits || 15).toString(),
+            totalPrice: typeof item.poAmount === 'string' ? item.poAmount.replace('₹', '') : (item.poAmount || '-'),
+            deadline: 'Returned to Procurement',
+            isReturned: true
+          }));
+
+        const combinedReturned = [...savedReturned];
+        inwardReturned.forEach(ir => {
+          if (!combinedReturned.some(sr => sr.vendorName === ir.vendorName && sr.orderId === ir.orderId)) {
+            combinedReturned.push(ir);
+          }
+        });
+
+        setReturnedOrders(combinedReturned);
+      } catch(e) {}
+    };
+
+    loadVendorPayData();
+    window.addEventListener('storage', loadVendorPayData);
+    window.addEventListener('focus', loadVendorPayData);
+    return () => {
+      window.removeEventListener('storage', loadVendorPayData);
+      window.removeEventListener('focus', loadVendorPayData);
+    };
+  }, []);
+
+  // Dynamically calculate combo data for generated orders
+  const generatedOrders = (sharedOrderData || []).filter(o => o.status === 'Generated' && !completedOrders.some(c => c.orderId === o.id));
+  const dynamicComboData = generatedOrders.flatMap(o => {
+    const subs = o.subCustomers && o.subCustomers.length > 0 ? o.subCustomers : [{ name: o.customer || 'Single Project' }];
+    const totalPanelsStr = o.equipment?.panels || '0';
+    const totalNumPanels = parseInt(totalPanelsStr.replace(/\D/g, '')) || 0;
+    const base = o.amount?.base || 0;
+    const gst = o.amount?.gst || 0;
+    const totalAmount = base + (base * gst / 100);
+
+    return subs.map(sub => {
+      const panelsPerSub = Math.round(totalNumPanels / subs.length);
+      const capacityPerSub = o.panelDetails?.totalCapacity ? (o.panelDetails.totalCapacity / subs.length) : (panelsPerSub * 500);
+      const kwPerSub = (capacityPerSub / 1000).toFixed(1) + ' KW';
+      const pricePerSub = totalAmount / subs.length;
+
+      return {
+        vendorName: o.vendorName || 'N/A',
+        brand: o.panelDetails?.brand || 'Mixed',
+        product: sub.name || 'Combo Kit',
+        technology: o.panelDetails?.technology || 'Polycrystalline',
+        projectType: 'Commercial',
+        wattPeak: o.panelDetails?.wattage || '-',
+        totalKW: kwPerSub,
+        totalPanels: panelsPerSub.toString(),
+        totalPrice: pricePerSub.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
+        deadline: 'Pending Proc.'
+      };
+    });
+  });
+
+  const validCompletedOrders = completedOrders.map(c => {
+    const o = generatedOrdersCache.find(g => g.id === c.orderId) || (sharedOrderData || []).find(o => o.id === c.orderId);
+    return { ...c, originalOrder: o };
+  }).filter(c => c.originalOrder);
+
+  const completedComboData = validCompletedOrders.map(c => {
+    const o = c.originalOrder;
+    const panelsStr = o.equipment?.panels || '0';
+    const numPanels = parseInt(panelsStr.replace(/\D/g, '')) || 0;
+    const totalCapacity = o.panelDetails?.totalCapacity || (numPanels * 500);
+    const totalKw = (totalCapacity / 1000).toFixed(1) + ' KW';
+    
+    return {
+      orderId: o.id,
+      procurementNo: c.procurementNo || '-',
+      vendorName: o.vendorName || 'N/A',
+      brand: 'Mixed',
+      product: `Custom Combo Kit (${o.subCustomers?.length || 1} Projects)`,
+      technology: o.panelDetails?.technology || 'Polycrystalline',
+      projectType: 'Mixed',
+      wattPeak: o.panelDetails?.wattage || '-',
+      totalKW: totalKw,
+      totalPanels: numPanels.toString(),
+      totalPrice: typeof c.amount === 'string' ? c.amount.replace('₹', '') : c.amount || '-',
+      deadline: 'Paid',
+      originalOrder: o
+    };
+  });
+
+  // Combine returned orders and completed orders
+  const comboData = [...returnedOrders, ...completedComboData];
 
   let displayData = [];
   if (kitMode === 'ComboKit') {
@@ -196,6 +290,8 @@ export default function VendorPay({ onNext }) {
                   checked={selectedRows.length === displayData.length && displayData.length > 0}
                 />
               </th>
+              <th className="px-4 py-3 font-medium border-r border-blue-300 w-[100px]">Order Number</th>
+              <th className="px-4 py-3 font-medium border-r border-blue-300 w-[130px]">Procurement Number</th>
               <th className="px-4 py-3 font-medium border-r border-blue-300 w-[120px]">Vendor Name</th>
               <th className="px-3 py-3 font-medium border-r border-blue-300">Brand</th>
               <th className="px-3 py-3 font-medium border-r border-blue-300">Product</th>
@@ -218,11 +314,24 @@ export default function VendorPay({ onNext }) {
                     checked={selectedRows.includes(idx)}
                   />
                 </td>
+                <td className="px-4 py-4 border-r border-gray-100 text-gray-700 font-bold text-center">
+                  {row.orderId || '-'}
+                </td>
+                <td className="px-4 py-4 border-r border-gray-100 text-blue-700 font-bold text-center">
+                  {row.procurementNo || '-'}
+                </td>
                 <td className="px-4 py-4 border-r border-gray-100 text-gray-700 font-medium break-words leading-tight">
                   {row.vendorName}
                 </td>
                 <td className="px-3 py-4 border-r border-gray-100 text-gray-700">{row.brand}</td>
-                <td className="px-3 py-4 border-r border-gray-100 text-gray-700 font-bold">{row.product}</td>
+                <td className="px-3 py-4 border-r border-gray-100 text-gray-700 font-bold">
+                  {row.product}
+                  {row.isReturned && (
+                    <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold ml-2 inline-block border border-amber-300">
+                      Returned to Procurement
+                    </span>
+                  )}
+                </td>
                 <td className="px-3 py-4 border-r border-gray-100 text-gray-700">{row.technology}</td>
                 <td className="px-3 py-4 border-r border-gray-100 text-gray-700">{row.projectType}</td>
                 <td className="px-3 py-4 border-r border-gray-100 text-gray-700">{row.wattPeak}</td>

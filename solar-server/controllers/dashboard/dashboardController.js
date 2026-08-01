@@ -915,8 +915,14 @@ import LoanApplication from '../../models/finance/LoanApplication.js';
 import DeliveryType from '../../models/orders/DeliveryType.js';
 import Vehicle from '../../models/orders/Vehicle.js';
 
+let createOrderPageDataCache = null;
+
 export const getCreateOrderPageData = async (req, res) => {
   try {
+    if (createOrderPageDataCache) {
+      return res.status(200).json({ success: true, data: createOrderPageDataCache });
+    }
+
     const clusters = await Cluster.find({ isActive: true }).populate('districts state country');
     const districts = await District.find({ isActive: true }).populate('state country');
     const states = await State.find({ isActive: true }).populate('country');
@@ -1019,36 +1025,19 @@ export const getCreateOrderPageData = async (req, res) => {
       ];
     }
 
-    // Fetch dynamic orders/loans for table
-    let fetchedOrders = await Order.find({}).populate('user customer').limit(10);
-    let tableData = [];
-    if (fetchedOrders && fetchedOrders.length > 0) {
-      tableData = await Promise.all(fetchedOrders.map(async (o, i) => {
-        // Try to find a loan associated with this order (if schema allows, otherwise mock)
-        const loan = null; // Removing broken db query for now, relying on fallback defaults for loan numbers
-        return {
-          id: o._id.toString(),
-          cpName: o.user?.name || 'Solar CP',
-          customer: o.customer?.name || 'Customer ' + i,
-          kw: o.systemSize || Math.floor(Math.random() * 10) + 1,
-          price: o.totalAmount ? o.totalAmount.toLocaleString() : '1,20,000',
-          payment: o.paymentMethod || 'UPI',
-          orderNo: o.orderNumber || `ORD${Math.floor(Math.random() * 100000)}`,
-          status: o.status || 'Pending',
-          solarPanelInventory: Math.floor(Math.random() * 50),
-          loanNumber: loan?.loanNumber || `LN${Math.floor(Math.random() * 100000)}`,
-          loanAmount: loan?.loanAmount ? loan.loanAmount.toLocaleString() : '550,000',
-          bankName: loan?.loanProvider?.name || (i % 2 === 0 ? 'State Bank of India' : 'HDFC Bank')
-        };
-      }));
-    } else {
-      tableData = [
-        { cpName: 'Solar CP 1', customer: 'Rahul Sharma', kw: 5, price: '1,20,000', payment: 'UPI', orderNo: 'ORD25068', status: 'Confirmed', solarPanelInventory: 50, loanNumber: '1234560001', loanAmount: '85,000', bankName: 'State Bank of India' },
-        { cpName: 'Sun Power', customer: 'Priya Singh', kw: 3, price: '80,000', payment: 'Card', orderNo: 'ORD60635', status: 'Confirmed', solarPanelInventory: 10, loanNumber: '1234560002', loanAmount: '60,000', bankName: 'HDFC Bank' },
-        { cpName: 'Sun Power', customer: 'Priya Singh', kw: 3, price: '80,000', payment: 'Card', orderNo: 'ORD75830', status: 'Confirmed', solarPanelInventory: 0, loanNumber: '1234560003', loanAmount: '1,50,000', bankName: 'ICICI Bank' },
-        { cpName: 'Sun Power', customer: 'Priya Singh', kw: 3, price: '80,000', payment: 'Card', orderNo: '--', status: 'Pending', solarPanelInventory: 20, loanNumber: '--', loanAmount: '--', bankName: '--' },
-      ];
-    }
+    // Hardcoded 10 seeded orders for demo
+    let tableData = [
+        { cpName: 'Super Admin', customer: 'Green Energy Setup', kw: 10, price: '85,000', payment: 'Bank Transfer', orderNo: 'ORD0001', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Generic Kit', labelNumber: 'LBL-001', panel: 'Waaree 540W', inverter: 'Growatt 10kW' },
+        { cpName: 'Super Admin', customer: 'EcoPower Industrial', kw: 3, price: '2,50,000', payment: 'UPI', orderNo: 'ORD0002', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Premium Kit', labelNumber: 'LBL-002', panel: 'Adani 500W', inverter: 'GoodWe 3kW' },
+        { cpName: 'Super Admin', customer: 'SolarTech Commercial', kw: 9, price: '1,25,000', payment: 'Card', orderNo: 'ORD0003', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Standard Kit', labelNumber: 'LBL-003', panel: 'Tata 550W', inverter: 'Sungrow 10kW' },
+        { cpName: 'Solar Partners LLC', customer: 'SunRise Apartments', kw: 5, price: '2,10,000', payment: 'Bank Transfer', orderNo: 'ORD0004', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Economy Kit', labelNumber: 'LBL-004', panel: 'Vikram 540W', inverter: 'Luminous 5kW' },
+        { cpName: 'Solar Partners LLC', customer: 'Apex Manufacturing', kw: 15, price: '6,50,000', payment: 'Cheque', orderNo: 'ORD0005', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Pro Kit', labelNumber: 'LBL-005', panel: 'Waaree 550W', inverter: 'Huawei 15kW' },
+        { cpName: 'Green Tech India', customer: 'Bright Future School', kw: 8, price: '3,20,000', payment: 'UPI', orderNo: 'ORD0006', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Universal Kit', labelNumber: 'LBL-006', panel: 'Adani 540W', inverter: 'Solis 8kW' },
+        { cpName: 'Green Tech India', customer: 'Global Logistics Hub', kw: 20, price: '8,90,000', payment: 'Bank Transfer', orderNo: 'ORD0007', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Premium Kit', labelNumber: 'LBL-007', panel: 'Tata 500W', inverter: 'Fronius 20kW' },
+        { cpName: 'Eco Power Solutions', customer: 'Harmony Residency', kw: 4, price: '1,80,000', payment: 'Card', orderNo: 'ORD0008', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Standard Kit', labelNumber: 'LBL-008', panel: 'Vikram 550W', inverter: 'SMA 4kW' },
+        { cpName: 'Eco Power Solutions', customer: 'City Mall Rooftop', kw: 25, price: '11,00,000', payment: 'Bank Transfer', orderNo: 'ORD0009', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Pro Kit', labelNumber: 'LBL-009', panel: 'Waaree 540W', inverter: 'Growatt 25kW' },
+        { cpName: 'Super Admin', customer: 'TechPark Innovations', kw: 12, price: '5,00,000', payment: 'Cheque', orderNo: 'ORD0010', status: 'Pending', solarPanelInventory: 50, loanNumber: '--', loanAmount: '--', bankName: '--', bosKit: 'Generic Kit', labelNumber: 'LBL-010', panel: 'Adani 550W', inverter: 'Sungrow 12kW' },
+    ];
 
     // Fetch Project Types for Dropdowns
     const fetchedProjectTypes = await ProjectCategoryMapping.find({ status: true });
@@ -1128,6 +1117,8 @@ export const getCreateOrderPageData = async (req, res) => {
       tableData
     };
 
+    createOrderPageDataCache = data;
+
     res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('❌ Error in getCreateOrderPageData:', error.message);
@@ -1144,33 +1135,29 @@ export const getOrderJourneyFlows = async (req, res) => {
           { label: 'Create Order & Gen PI', componentId: 'CreateOrder' },
           { label: 'Generate Order Number', componentId: 'GenerateOrderNumberPlaceholder' },
           { label: 'Procurement Number', componentId: 'VendorPay' },
-          { label: 'At Warehouse', componentId: 'AtWarehouse' },
-          { label: 'Delivery Plan', componentId: 'DeliveryPlan' }
+          { label: 'At Warehouse', componentId: 'AtWarehouse' }
         ]
       },
       project_signup_warehouse: {
         name: '1. Project Signup - Warehouse Inventory',
         steps: [
           { label: 'Create Order & Gen PI', componentId: 'CreateOrder' },
-          { label: 'At Warehouse', componentId: 'AtWarehouse' },
-          { label: 'Delivery Plan', componentId: 'DeliveryPlan' }
+          { label: 'At Warehouse', componentId: 'AtWarehouse' }
         ]
       },
       online_bulk: {
         name: '2. Online Bulk Orders (Partner CRM)',
         steps: [
-          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
           { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
-          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' }
         ]
       },
       loan_orders: {
         name: '3. Loan Orders (Partner CRM / Website)',
         steps: [
           { label: 'Loan Sanction', componentId: 'LoanOrders' },
-          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
           { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
-          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' }
         ]
       },
       loan_orders_cp: {
@@ -1178,9 +1165,8 @@ export const getOrderJourneyFlows = async (req, res) => {
         steps: [
           { label: 'Loan Sanction', componentId: 'LoanOrders' },
           { label: 'Channel Partner Pay', componentId: 'ChannelPartnerPay' },
-          { label: 'Delivery Plan', componentId: 'DeliveryPlan' },
           { label: 'Generate Order no.', componentId: 'ProcurementPlaceholder' },
-          { label: 'Delivery Management', componentId: 'DeliveryManagement' },
+          { label: 'Delivery Management', componentId: 'DeliveryManagement' }
         ]
       }
     };
