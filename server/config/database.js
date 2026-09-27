@@ -27,14 +27,23 @@ const connectDB = async () => {
     return;
   }
 
-  if (!process.env.MONGODB_URI) {
+  let uri = process.env.MONGODB_URI ? process.env.MONGODB_URI.trim().replace(/^["']|["']$/g, '') : '';
+  
+  // Auto-clean if user accidentally pasted prefix like "MONGODB_URI=" or "mongo db url ="
+  if (uri.includes('mongodb+srv://')) {
+    uri = 'mongodb+srv://' + uri.split('mongodb+srv://')[1];
+  } else if (uri.includes('mongodb://')) {
+    uri = 'mongodb://' + uri.split('mongodb://')[1];
+  }
+
+  if (!uri) {
     lastDbError = 'MONGODB_URI environment variable is missing';
     console.error('❌ MONGODB_URI environment variable is not defined.');
     return;
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 10000,
     });
     lastDbError = null;
