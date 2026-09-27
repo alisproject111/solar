@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import connectDB from './config/database.js';
+import connectDB, { lastDbError } from './config/database.js';
 import authRoutes from './routes/auth/auth.js';
 import userRoutes from './routes/users/users.js';
 import productRoutes from './routes/inventory/products.js';
@@ -196,9 +196,10 @@ app.get(['/api/health', '/health'], (req, res) => {
   const dbStatus = dbState === 1 ? 'Connected' : dbState === 2 ? 'Connecting' : 'Disconnected';
   res.status(200).json({
     success: dbState === 1,
-    message: dbState === 1 ? 'Database is connected' : 'Database is disconnected. Check Vercel MONGODB_URI env variable & MongoDB Atlas Network Access (0.0.0.0/0)',
+    message: dbState === 1 ? 'Database is connected' : 'Database is disconnected',
     database: dbStatus,
     hasMongoUriEnv: Boolean(process.env.MONGODB_URI),
+    dbError: lastDbError,
     timestamp: new Date().toISOString()
   });
 });

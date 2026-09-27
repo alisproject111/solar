@@ -17,6 +17,8 @@ const getPublicIP = () => {
   });
 };
 
+let lastDbError = null;
+
 const connectDB = async () => {
   mongoose.set('strictQuery', true);
 
@@ -25,13 +27,20 @@ const connectDB = async () => {
     return;
   }
 
+  if (!process.env.MONGODB_URI) {
+    lastDbError = 'MONGODB_URI environment variable is missing';
+    console.error('❌ MONGODB_URI environment variable is not defined.');
+    return;
+  }
+
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,
     });
-
+    lastDbError = null;
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
   } catch (error) {
+    lastDbError = error.message;
     console.error(`❌ Error connecting to MongoDB: ${error.message}`);
     
     // Provide diagnostic information for common Atlas issues
@@ -50,4 +59,5 @@ const connectDB = async () => {
   }
 };
 
+export { lastDbError };
 export default connectDB;
