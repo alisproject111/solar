@@ -196,8 +196,9 @@ app.get(['/api/health', '/health'], (req, res) => {
   const dbStatus = dbState === 1 ? 'Connected' : dbState === 2 ? 'Connecting' : 'Disconnected';
   res.status(200).json({
     success: dbState === 1,
-    message: dbState === 1 ? 'Database is connected' : 'Database is disconnected',
+    message: dbState === 1 ? 'Database is connected' : 'Database is disconnected. Check Vercel MONGODB_URI env variable & MongoDB Atlas Network Access (0.0.0.0/0)',
     database: dbStatus,
+    hasMongoUriEnv: Boolean(process.env.MONGODB_URI),
     timestamp: new Date().toISOString()
   });
 });
