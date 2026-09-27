@@ -191,18 +191,22 @@ app.use('/api/bulk-buy-offers', bulkBuyOfferRoutes);
 app.get('/api/supplier-types', getSupplierTypes);
 app.get('/api/modules', getAllModules);
 
-app.get('/api/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+app.get(['/api/health', '/health'], (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = dbState === 1 ? 'Connected' : dbState === 2 ? 'Connecting' : 'Disconnected';
   res.status(200).json({
-    message: 'Server is running',
+    success: dbState === 1,
+    message: dbState === 1 ? 'Database is connected' : 'Database is disconnected',
     database: dbStatus,
     timestamp: new Date().toISOString()
   });
 });
 
-app.get('/', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+app.get(['/', '/api'], (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = dbState === 1 ? 'Connected' : dbState === 2 ? 'Connecting' : 'Disconnected';
   res.status(200).json({
+    success: true,
     message: 'Welcome to Solar ERP API',
     status: 'Running',
     database: dbStatus

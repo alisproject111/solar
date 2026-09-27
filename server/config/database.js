@@ -27,7 +27,7 @@ const connectDB = async () => {
 
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 10000,
     });
 
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
@@ -47,8 +47,6 @@ const connectDB = async () => {
       console.log('4. Alternatively, add 0.0.0.0/0 to allow access from anywhere (for development only).');
       console.log('--------------------------------------------------------------\n');
     }
-
-    process.exit(1);
   }
 };
 
